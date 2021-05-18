@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title></title>
+	<style>
+		.tjfnewtree_box {
+			position: relative;
+			user-select:none;
+			--selectboxwidth: 200px; /*组件的宽*/
+			--selectboxheight: 30px;
+			--backgroundwidth: 250px;
+			--backgroundcolor: white /*背景颜色*/
+		}
+		.tjfnewtree_box div{
+			box-sizing: border-box;
+		}
+		.tjfnewtree_box label {
+			cursor: pointer;
+			display: inline-block;
+			transform: translate(0px, -20%);
+		}
+		.tjfnewtree_box>.contral_all{
+			cursor: pointer;
+			padding-left: 10px;
+			width: var(--selectboxwidth);
+			height: var(--selectboxheight);
+			color: #000;
+			border: 1px solid black;
+			line-height: calc(var(--selectboxheight) - 4px);
+		}
+		.tjfnewtree_box .selectinput{
+			width: 80%;
+			height: 25px;
+			margin-top: 15px;
+			margin-bottom: 10px;
+			outline: none;
+			border: 1px solid rgb(192,196,204);
+			border-radius: 5px;
+			padding-left: 15px;
+		}
+		.tjfnewtree_box .expansion_box {
+			position: absolute;
+			text-align: center;
+			border: 1px solid #ccc;
+			width: var(--backgroundwidth);
+			display: none;
+			top: 100%;
+			left: 0px;
+			padding-left: 10px;
+			background-color: var(--backgroundcolor);
+		}
+		.tjfnewtree_box .main_ele {
+			display: flex;
+			margin-top: 5px;
+		}
+		.tjfnewtree_box .triangle {
+			margin-top: 5px;
+			margin-right: 8px;
+			cursor: pointer;
+			width: 0px;
+			height: 0px;
+			border-top: 8px solid rgb(192,196,204);
+			border-left: 8px solid transparent;
+			border-right: 8px solid transparent;
+		}
+		.tjfnewtree_box .main_checkbox {
+			height: var(--selectboxwidths);
+		}
+		.tjfnewtree_box .main_checkbox input {
+			vertical-align: bottom;
+		}
+		.tjfnewtree_box .children_ele {
+			display: flex;
+		}
+		.tjfnewtree_box .children_label {
+			display: inline-block;
+			font-size: 14px;
+			transform: translateY(-20%);
+		}
+		.tjfnewtree_box .children_input_span {
+			cursor: pointer;
+		}
+	</style>
+</head>
+<body>
+	<div style="display: flex;width: 700px; justify-content: space-around">
+		<div id="box1"></div>
+		<div id="box2"></div>
+	</div>
+	<script src="jquery-3.5.0.min.js"></script>
+	<script type="text/javascript">
+		/**
+		 *@param {ele为jquery元素对象}
+		 * @params{getselectednode方法返回选中的节点}
+		 * @params{paramTree:{ name: 满意度原因，isselected: false(default).ismodal_add:false(default)是否有子元素的点击事件, setcss:{setboxwidth: 200px(default)控件的宽度, setexpansionwidth: 250px(default)树主体的宽度, setbackground: white(default)背景颜色}}}
+		 */
+			class tjfnewTree{
+			constructor(jqele,treeData,paramTree) {
+				this.idfirst = (new Date()).getTime()
+				this.jqele = jqele
+			    this.paramTree = paramTree ? paramTree : { name: '全部', isselected: false, ismodal_add: false}
+				this.treeData = [{name: '全选', id: this.idfirst, children: treeData}]
+				this.treeDatacopy = treeData
+				this.recursionTree()
+				this.addevent()
+				this.setcss()
+			}
+			setcss(){
+				if(this.paramTree.setcss){
+					if(this.paramTree.setcss.setboxwidth){
+						$('.tjfnewtree_box').css('--selectboxwidth',this.paramTree.setcss.setboxwidth)
+					}if(this.paramTree.setcss.setexpansionwidth){
+						$('.tjfnewtree_box').css('--backgroundwidth',this.paramTree.setcss.setexpansionwidth)
+					}if(this.paramTree.setcss.setbackground){
+						$('.tjfnewtree_box').css('--backgroundcolor',this.paramTree.setcss.setbackground)
+					}
+				}
+			}
+			addevent(){
+				let thsi = this
+				thsi.jqele.find('.selectinput').on('keyup',function(){ // 搜索事件
+					thsi.treeDatacopy = JSON.parse(JSON.stringify(thsi.treeData[0].children))
+					let value = thsi.jqele.find('.selectinput').val().trim()
+					selectarr(thsi.treeDatacopy)
+					console.log(thsi.treeDatacopy)
+					function selectarr (arr){
+						let flag = false
+						let lengths = arr.length - 1
+						for (let i = lengths; i > 0; i--){
+							if(!arr[i].name.includes(value) && arr[i].id != value){ // 不匹配
+								if(arr[i].children){ // 不匹配但是有子
+									!selectarr(arr[i]) ? arr.splice(i,1) : null
+								} else { // 不匹配无子
+									arr.splice(i,1)
+								}
+							} else { // 匹配
+								flag = true
+								console.log(arr[i])
+							}
+						}
+						return flag
+					}
+				})
+				thsi.jqele.find('.contral_all').on('click', function () { // 总盒子的显示与隐藏
+					if($(this).attr('isexpansion') == 'true') {
+						$(this).attr('isexpansion', false)
+						thsi.jqele.find('.expansion_box').slideUp(500)
+					}else{
+						$(this).attr('isexpansion', true)
+						thsi.jqele.find('.expansion_box').slideDown(500)
+					}
+				})
+				thsi.jqele.find('.contral_main').on('click',function(e){ // 展开与折叠功能
+					e.stopPropagation()
+					let self = this
+					if($(self).attr('isexpansion') == 'false'){
+						thsi.jqele.find('.children_box').each(function(index,ele){
+								if($(ele).attr('name') == $(self).attr('name')) {
+									$(ele).slideUp(200)
+									$(self).css({'transform': 'rotate(-90deg)'})
+									$(self).attr('isexpansion', true)
+								}
+							})
+					} else if($(self).attr('isexpansion') == 'true') {
+						thsi.jqele.find('.children_box').each(function(index,ele){
+							if($(ele).attr('name') == $(self).attr('name')) {
+								$(ele).slideDown(200)
+								$(self).css({'transform': 'rotate(0deg)'})
+								$(self).attr('isexpansion', false)
+							}
+						})
+					}
+				})
+				thsi.jqele.find('.main_label').on('change',function(e){ // 节点全选功能
+					e.stopPropagation()
+					let self = this
+					if($(self).attr('controllname') == undefined) return
+					if ($(self).find('input').is(':checked')) {
+						thsi.jqele.find('.main_label').each(function(index,ele){
+							if($(ele).attr('controlledname') == $(self).attr('controllname')) {
+								$(ele).find('input').prop('checked',true)
+						if($(ele).attr('controllname')){
+							$(ele).change()
+						}
+					}
+						})
+					} else{
+						thsi.jqele.find('.main_label').each(function(index,ele){
+							if($(ele).attr('controlledname') == $(self).attr('controllname')) {
+								$(ele).find('input').prop('checked',false)
+						if($(ele).attr('controllname')){
+							$(ele).change()
+						}
+							}
+						})
+					}
+				})
+				thsi.jqele.find('.only_label').on('change',function(){ // 单选功能
+					 let self = this
+					 if(thsi.jqele.find('label[controlledname='+$(self).attr('controlledname')+']').length == thsi.jqele.find('label[controlledname='+$(self).attr('controlledname')+']').find('input:checked').length) { // 全都勾选
+				        thsi.jqele.find('.notonly_label').each(function(index, ele){
+				            if($(ele).attr('controllname') == $(self).attr('controlledname')) {
+				                $(ele).find('input').prop('checked', true)
+				            }
+				        })
+				    } else {
+				        thsi.jqele.find('.notonly_label').each(function(index, ele){
+				            if($(ele).attr('controllname') == $(self).attr('controlledname')) {
+				                $(ele).find('input').prop('checked', false)
+				            }
+				        })
+				    }
+				})
+				// 点击加号功能
+				// thsi.jqele.find('.modal_add').on('click',function(){ 
+				// let self = this
+				// $.post(getAllProductURL, {category_id: $(self).attr('productid')}, function (reply) {
+				// 	$('#treeDialogue .customer-modal-body .list').empty()
+				// 	$('#treeDialogue').modal()
+				// 	$('#treeDialogue .modal-title').html($(self).attr('productname') + "产品列表")
+				// 	reply.forEach(item => {
+				// 		let div = $('<div>')
+				// 		let label = $('<label><input id= ch' + item.id + ' type="checkbox"/><span class="number">' + item.taobao_id + '</span><span class="text">' + item.name + '</span></label>').attr({'name': item.id, 'for': 'ch' + item.id })
+				// 	    div.append(label)
+				// 	    $('#treeDialogue .customer-modal-body .list').append(div)
+				// 	})
+				// })
+				// $('#searchid').off('click')
+				 // 再次搜索
+				// $('#searchid').on('click', function () {
+				// 	$.post(getAllProductByTaoBaoIdsURL, {taobao_ids: $('#searchidinput').val()}, function (reply) {
+				// 		$('#treeDialogue .customer-modal-body .list').empty()
+				// 		reply.forEach(item => {
+				// 			let div = $('<div>')
+				// 			let label = $('<label><input id= ch' + item.id + ' type="checkbox"/><span class="number">' + item.taobao_id + '</span><span class="text">' + item.name + '</span></label>').attr({'name': item.id, 'for': 'ch' + item.id })
+				// 	        div.append(label)
+				// 	        $('#treeDialogue .customer-modal-body .list').append(div)
+				// 	    })
+				// 	})
+				// })
+				// $('#submitproduct').off('click')
+				// $('#submitproduct').on('click', function () {
+				// 	let arr = []
+				// 	$('#treeDialogue').find('input:checked').each((index, ele) => {
+				// 		arr.push(($(ele).attr('id')).slice(2))
+				// 	})
+				// 	thsi.product_ids = arr.join(',')
+				// 	if (thsi.toggle == 1) {
+				// 		thsi.getTraitAspect();
+				// 	} else {
+				// 		thsi.curPage1 = 1
+				// 		thsi.curPage2 = 1
+				// 		thsi.showTable()
+				// 	}
+				// 	thsi.showcurrentdetail()
+				// 	$('.expansion_box').hide()
+				// 	$('#contral_all').attr('isexpansion', false).html('+')
+				// })
+				// })
+			}
+			recursionTree(treeData){ // 封装的树结构
+				let thsi = this
+				let addtree = $('<div class="tjfnewtree_box">')
+				let contral_all = $(`<div class="contral_all">${thsi.paramTree.name}</div>`).attr('isexpansion', false) // 总开关
+				let expansion_box = $('<div>').addClass('expansion_box') // 总盒子
+				if(this.paramTree.isselected) {
+					let searchbox = $('<input class="selectinput" placeholder="输入关键字或ID过滤">')
+					expansion_box.append(searchbox)
+				}
+				thsi.jqele.append(addtree)
+				addtree.append(contral_all,expansion_box)
+				expansion_box.append(thsi.creatTree(thsi.treeData))
+			}
+			creatTree(treeArr,i,name) {
+				let thsi = this
+				let div = $('<div>')
+				if(i == undefined){
+					i = 0
+				}else{
+					i++
+				}
+				for(let item of treeArr) {
+					if(item.children) { // 有子节点的时候
+						let div1 = $('<div class="main_ele"></div>').css({'margin-left': `${20*i}px`}) // 大选择框
+						let div2 = $('<div class="triangle contral_main">').attr({'name': item.name, 'isexpansion': false})
+						let div3 = $('<div class="main_checkbox"></div>') // 勾选框
+						let label1 = $('<label class="main_label notonly_label"><input id='+thsi.idfirst+''+item.id+' type="checkbox"/>'+item.name+'</label>').attr({'ischeckall': false, 'controlledname': name ? name : undefined, 'controllname': item.name,'for':thsi.idfirst+''+item.id})
+						let div4 = $('<div>').addClass('children_box').attr({'name': item.name, 'series': i}) // 子盒子
+						div3.append(label1)
+						div1.append(div2,div3)
+						div.append(div1,div4)
+						div4.append(thsi.creatTree (item.children, i, item.name)) // 子盒子处递归
+					} else { // 无子节点的时候
+						let div1 = $('<div class="main_ele"></div>').css({'margin-left': `${20*i + 30}px`}) // 大选择框
+						let div3 = $('<div class="main_checkbox"></div>')
+						let label1 = $('<label class="main_label only_label"><input id='+thsi.idfirst+''+item.id+' type="checkbox"/>'+item.name+'</label>').attr({'controlledname':name ? name :undefined, 'for':thsi.idfirst+''+item.id})
+						if(thsi.paramTree.ismodal_add){
+						let span = $('<span class="modal_add" data-toggle="modal" data-target="#treeDialogue"> +</span>').attr({'productid': thsi.idfirst+''+item.id, 'productname': item.name})
+						div3.append(label1,span)
+						} else{
+							div3.append(label1)
+						}
+						div1.append(div3)
+						div.append(div1)
+					}
+				}
+				return div
+			}
+			getselectednode(){
+				let arr = []
+				$('label[class="main_label only_label"]').find('input:checked').each((index, ele) => {
+				     arr.push($(ele).attr('id').slice(13))
+				})
+				return arr
+			}
+		}
+		
+		
+		
+		
+		var obj = [ 
+					{ name: '避孕套', id: 1, children:[
+						{ name:'最薄AIR系列', id: 2,children: [
+							{name: '呵呵', id: 14}, { name: '超薄系列', id: 3 }, { name: '持久系列', id: 4 }, { name: '快感X系列', id: 5}]},{name: 'happy系列', id: 14}] },
+					{ name: '情趣用品', id: 6, children: [
+						{ name: '情趣跳蛋', id: 7 }, { name: '振动棒', id: 8 }, { name: '助兴小玩具', id: 9 }] },
+					{ name: '人体润滑液', id: 10, children: [
+						{ name: '快感增强液', id: 11 }, { name: '情趣啫喱', id: 12 }, { name: '情趣按摩油', id: 13 }] }
+					]
+		var obj2 = [
+					{name: '剑道', id: 100, children: [ {name: '陆地神仙', id: 999} ]},
+					{ name: '避孕套', id: 1, children:[
+						{ name:'最薄AIR系列', id: 2,children: [
+							{name: '呵呵', id: 14}, { name: '超薄系列', id: 3 }, { name: '持久系列', id: 4 }, { name: '快感X系列', id: 5}]},{name: 'happy系列', id: 14}] },
+					{ name: '情趣用品', id: 6, children: [
+						{ name: '情趣跳蛋', id: 7 }, { name: '振动棒', id: 8 }, { name: '助兴小玩具', id: 9 }] },
+					{ name: '人体润滑液', id: 10, children: [
+						{ name: '快感增强液', id: 11 }, { name: '情趣啫喱', id: 12 }, { name: '情趣按摩油', id: 13 }] }
+		]
+		
+		
+		new tjfnewTree($('#box1'),obj, {name: '满意度原因', isselected: true, ismodal_add: true, setcss: {'setboxwidth': '100px', 'setexpansionwidth': '250px', 'setbackground': 'white'}})
+		let abc = new tjfnewTree($('#box2'),obj2)
+		
+		
+	</script>
+</body>
+</html>
