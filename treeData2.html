@@ -22,7 +22,20 @@
 			display: inline-block;
 			transform: translate(0px, -20%);
 		}
+		.tjfnewtree_box .arrowtriangle{
+			display: inline-block;
+			
+			width: 5px;
+			height: 5px;
+			border-right: 1px solid black;
+			border-bottom: 1px solid black;
+			transform: rotate(45deg);
+		}
 		.tjfnewtree_box>.contral_all{
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding-right: 10px;
 			cursor: pointer;
 			padding-left: 10px;
 			width: var(--selectboxwidth);
@@ -68,6 +81,7 @@
 		}
 		.tjfnewtree_box .main_checkbox {
 			height: var(--selectboxwidths);
+			display: flex;
 		}
 		.tjfnewtree_box .main_checkbox input {
 			vertical-align: bottom;
@@ -83,6 +97,15 @@
 		.tjfnewtree_box .children_input_span {
 			cursor: pointer;
 		}
+		.tjfnewtree_box .modal_add{
+			margin-left: 5px;
+			cursor: pointer;
+			text-align: center;
+			line-height: 11px;
+			border: 1px solid black;
+			width: 12px;
+			height: 12px;
+		}
 	</style>
 </head>
 <body>
@@ -95,7 +118,15 @@
 		/**
 		 *@param {ele为jquery元素对象}
 		 * @params{getselectednode方法返回选中的节点}
-		 * @params{paramTree:{ name: 满意度原因，isselected: false(default).ismodal_add:false(default)是否有子元素的点击事件, setcss:{setboxwidth: 200px(default)控件的宽度, setexpansionwidth: 250px(default)树主体的宽度, setbackground: white(default)背景颜色}}}
+		 * @params{paramTree:{
+			 * name: 满意度原因，
+			 * isselected: false(default).ismodal_add:false(default)是否有子元素的点击事件, 
+			 * setcss:{setboxwidth: 200px(default)控件的宽度, 
+			 *         setexpansionwidth: 250px(default)树主体的宽度, 
+			 *         setbackground: white(default)背景颜色}
+			 * addcallback: 点击加号时的回调函数
+			 * }
+			 * }
 		 */
 			class tjfnewTree{
 			constructor(jqele,treeData,paramTree) {
@@ -104,7 +135,7 @@
 			    this.paramTree = paramTree ? paramTree : { name: '全部', isselected: false, ismodal_add: false}
 				this.treeData = [{name: '全选', id: this.idfirst, children: treeData}]
 				this.treeDatacopy = treeData
-				this.recursionTree()
+				this.recursionTree(this.treeData)
 				this.addevent()
 				this.setcss()
 			}
@@ -121,29 +152,33 @@
 			}
 			addevent(){
 				let thsi = this
+				thsi.jqele.find('.selectinput').off('keyup')
 				thsi.jqele.find('.selectinput').on('keyup',function(){ // 搜索事件
 					thsi.treeDatacopy = JSON.parse(JSON.stringify(thsi.treeData[0].children))
 					let value = thsi.jqele.find('.selectinput').val().trim()
 					selectarr(thsi.treeDatacopy)
-					console.log(thsi.treeDatacopy)
-					function selectarr (arr){
+					thsi.jqele.find('.selectinput').siblings().remove()
+					thsi.jqele.find('.expansion_box').append(thsi.creatTree([{name: '全选', id: this.idfirst, children: thsi.treeDatacopy}]))
+					thsi.addevent()
+					function selectarr (arr){ // 搜索算法
 						let flag = false
 						let lengths = arr.length - 1
-						for (let i = lengths; i > 0; i--){
+						for (let i = lengths; i >= 0; i--){
 							if(!arr[i].name.includes(value) && arr[i].id != value){ // 不匹配
 								if(arr[i].children){ // 不匹配但是有子
-									!selectarr(arr[i]) ? arr.splice(i,1) : null
+									!selectarr(arr[i].children) ? arr.splice(i,1) : null
 								} else { // 不匹配无子
 									arr.splice(i,1)
 								}
 							} else { // 匹配
 								flag = true
-								console.log(arr[i])
 							}
 						}
 						return flag
 					}
 				})
+				
+				thsi.jqele.find('.contral_all').off('click')
 				thsi.jqele.find('.contral_all').on('click', function () { // 总盒子的显示与隐藏
 					if($(this).attr('isexpansion') == 'true') {
 						$(this).attr('isexpansion', false)
@@ -215,56 +250,15 @@
 				    }
 				})
 				// 点击加号功能
-				// thsi.jqele.find('.modal_add').on('click',function(){ 
-				// let self = this
-				// $.post(getAllProductURL, {category_id: $(self).attr('productid')}, function (reply) {
-				// 	$('#treeDialogue .customer-modal-body .list').empty()
-				// 	$('#treeDialogue').modal()
-				// 	$('#treeDialogue .modal-title').html($(self).attr('productname') + "产品列表")
-				// 	reply.forEach(item => {
-				// 		let div = $('<div>')
-				// 		let label = $('<label><input id= ch' + item.id + ' type="checkbox"/><span class="number">' + item.taobao_id + '</span><span class="text">' + item.name + '</span></label>').attr({'name': item.id, 'for': 'ch' + item.id })
-				// 	    div.append(label)
-				// 	    $('#treeDialogue .customer-modal-body .list').append(div)
-				// 	})
-				// })
-				// $('#searchid').off('click')
-				 // 再次搜索
-				// $('#searchid').on('click', function () {
-				// 	$.post(getAllProductByTaoBaoIdsURL, {taobao_ids: $('#searchidinput').val()}, function (reply) {
-				// 		$('#treeDialogue .customer-modal-body .list').empty()
-				// 		reply.forEach(item => {
-				// 			let div = $('<div>')
-				// 			let label = $('<label><input id= ch' + item.id + ' type="checkbox"/><span class="number">' + item.taobao_id + '</span><span class="text">' + item.name + '</span></label>').attr({'name': item.id, 'for': 'ch' + item.id })
-				// 	        div.append(label)
-				// 	        $('#treeDialogue .customer-modal-body .list').append(div)
-				// 	    })
-				// 	})
-				// })
-				// $('#submitproduct').off('click')
-				// $('#submitproduct').on('click', function () {
-				// 	let arr = []
-				// 	$('#treeDialogue').find('input:checked').each((index, ele) => {
-				// 		arr.push(($(ele).attr('id')).slice(2))
-				// 	})
-				// 	thsi.product_ids = arr.join(',')
-				// 	if (thsi.toggle == 1) {
-				// 		thsi.getTraitAspect();
-				// 	} else {
-				// 		thsi.curPage1 = 1
-				// 		thsi.curPage2 = 1
-				// 		thsi.showTable()
-				// 	}
-				// 	thsi.showcurrentdetail()
-				// 	$('.expansion_box').hide()
-				// 	$('#contral_all').attr('isexpansion', false).html('+')
-				// })
-				// })
+				if(thsi.paramTree.ismodal_add){
+					thsi.jqele.find('.modal_add').on('click',thsi.paramTree.addcallback)
+				}
+				
 			}
 			recursionTree(treeData){ // 封装的树结构
 				let thsi = this
 				let addtree = $('<div class="tjfnewtree_box">')
-				let contral_all = $(`<div class="contral_all">${thsi.paramTree.name}</div>`).attr('isexpansion', false) // 总开关
+				let contral_all = $(`<div class="contral_all">${thsi.paramTree.name} <span class="arrowtriangle"></div>`).attr('isexpansion', false) // 总开关
 				let expansion_box = $('<div>').addClass('expansion_box') // 总盒子
 				if(this.paramTree.isselected) {
 					let searchbox = $('<input class="selectinput" placeholder="输入关键字或ID过滤">')
@@ -272,7 +266,7 @@
 				}
 				thsi.jqele.append(addtree)
 				addtree.append(contral_all,expansion_box)
-				expansion_box.append(thsi.creatTree(thsi.treeData))
+				expansion_box.append(thsi.creatTree(treeData))
 			}
 			creatTree(treeArr,i,name) {
 				let thsi = this
@@ -341,8 +335,17 @@
 						{ name: '快感增强液', id: 11 }, { name: '情趣啫喱', id: 12 }, { name: '情趣按摩油', id: 13 }] }
 		]
 		
-		
-		new tjfnewTree($('#box1'),obj, {name: '满意度原因', isselected: true, ismodal_add: true, setcss: {'setboxwidth': '100px', 'setexpansionwidth': '250px', 'setbackground': 'white'}})
+		let paramsobj = {
+			name: '满意度原因',
+			isselected: true,
+			ismodal_add: true,
+			setcss: {'setboxwidth': '200px',
+				     'setexpansionwidth': '250px',
+				     'setbackground': 'white'
+				    },
+			addcallback:function(){console.log(1)}
+			}
+		let ab = new tjfnewTree($('#box1'),obj, paramsobj)
 		let abc = new tjfnewTree($('#box2'),obj2)
 		
 		
